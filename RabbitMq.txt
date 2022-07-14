@@ -1,0 +1,107 @@
+Initial Steps:
+Open cmd with admin rights:
+cd C:\Program Files\RabbitMQ Server\rabbitmq_server-3.8.7\sbin
+rabbitmq-plugins enable rabbitmq_management
+net start RabbitMQ
+
+http://localhost:15672/ ..............guest/guest
+After working: net stop RabbitMQ
+----------------------------------------------------------------
+
+Order Publisher, Payment Subscriber
+Class 2
+dotnet new sln --name eShopSolution
+dotnet new webapi --name Order
+dotnet new webapi --name Payment
+dotnet new webapi --name ApiGateway
+dotnet new classlib --name RabbitMq
+cd RabbitMq
+dotnet add package RabbitMq.client
+cd ..
+dotnet sln add Order/Order.csproj
+dotnet sln add Payment/Payment.csproj
+dotnet sln add ApiGateway/ApiGateway.csproj
+dotnet sln add RabbitMq/RabbitMq.csproj
+cd ApiGateway
+dotnet add package ocelot
+cd ..
+cd order
+dotnet add reference ../RabbitMq/RabbitMq.csproj
+cd Payment
+dotnet add reference ../RabbitMq/RabbitMq.csproj
+
+25Mar
+APIGateway pattern
+cd ApiGateway
+Create routing.json
+Program.cs - Add 
+config.AddJsonFile("routing.json");//loading routing.json file before calling Startup
+
+30+ interconnected microservices and managing all is not easy - Zipkin
+Zipkin is a distributed tracing system. It helps to gather timing data needed to troubleshoot latency problems in service architectures. Features include both the collection and lookup of this data.
+
+Multiple Services
+ApiGateway
+Docker
+
+
+30 Mar
+Create Docker files for ApiGateway,Order & Payment
+
+Compose is a tool for defining and running multi-container Docker applications. With Compose, you use a YAML file to configure
+ your application's services. Then, with a single command, you create and start all the services from your configuration.
+
+docker-compose build
+
+------------------------------------------------------------------------------------------------------------
+
+4/4 - 
+1.Why you are creating an object of RabbitMq class as Singleton in Payment?
+2.Does payment is a publisher or Subscriber? - Publisher
+3.Proper Definition & Diagram of RabbitMq for interview purpose
+4.For SAGA pattern, RabbitMq/Kafka is needed or not?
+
+How you can configure lifetime of an object in Order API for messaging? OrderApi is a publisher and Payment APi is a Subscriber
+
+Allows consumers to be notified of application lifetime events. 
+
+So we added IEventBus,MessageBus of RabbitMq project in Startup.cs of Both Payment and Order:
+1.services.AddSingleton<IEventBus,MessageBus>()//In Payment
+2.In Order:services.AddSingleton<IEventBus,MessageBus>(t=>{
+                var lifetime = t.GetRequiredService<IHostApplicationLifetime>();
+                return new MessageBus(lifetime);
+3.In RabbitMq->MessageBus- Added a default Constructor and Parameterized Constructor                
+
+----------------------------------------------------------------------------------------------------------------
+4/8
+We called subscribeProcess() inside subscribe()
+And then created docker images of publisher(OrderAPI) and subscriber(PaymentAPI) and  by running docker-compose build 
+-------------------------------------------------------------------------------------------------------------------
+
+Summary So far:
+So far we have created PaymentApi and OrderApi which are the publisher and subscriber.Inside RabbitMq, we have our IEventBus with publish()
+& subscribe() and we are implementing this interface inside our MessageBus class.We had our separate Dockerfile for all the publisher and subscriber
+along with the APIGateway which consists of ocelot.Inside the main RabbitMQ project, we created docker-compose.yml which consists of 
+different services with their docker files and port numbers. So we ran docker-compose build to create images of the services.
+Next step is to proceed with the containers. 
+
+------------------------------------------------------------------------------------------
+4/11
+Payment(Publisher)-Once payment is done then only order is placed. So Order is a subscriber.
+
+Terminal1 - PaymentAPI - It sends a message which we can see in Queues inside RabbitMq server. Make sure that the reference of RabbitMq is there inside Payment csproj
+Inside Payment Controller, we are calling publish() method of IEventBus/MessageBus by injecting IEventBus
+dotnet run
+
+Terminal2 - ApiGateway - dotnet run
+
+In browser - http://localhost:5001/Payment/PaymentDetail ..............to verify for published message
+
+Terminal3 - Order - Subscriber ------Inside Order Controller, we are calling subscribe() method of IEventBus/MessageBus by injecting IEventBus 
+dotnet run
+In browser - http://localhost:5001/Order/OrderDetail ..............to verify for published message
+
+
+
+
+ 

@@ -1,0 +1,26 @@
+version: '3.4'
+
+services: 
+  APIGateway:
+    image: apigateway
+    build:
+      context: .
+      dockerfile: APIGateway/Dockerfile
+    ports:
+      - 5001:5001
+
+  Payment:
+    image: payment
+    build:
+      context: .
+      dockerfile: Payment/Dockerfile
+    ports:
+      - 5002:5002
+
+  Order:
+    image: order
+    build:
+      context: .
+      dockerfile: Order/Dockerfile
+    ports:
+      - 5003:5003       
